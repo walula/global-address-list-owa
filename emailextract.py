@@ -136,15 +136,21 @@ peopledata = {
 # Make da request.
 r = s.post(FIND_PEOPLE_URL, headers={'Content-type': 'application/json', 'X-OWA-CANARY': session_canary, 'Action': 'FindPeople'}, data=json.dumps(peopledata)).json()
 
-
 # Parse out the emails, print them and append them to a file.
 userlist = r['Body']['ResultSet']
 
 with open(OUTPUT, 'a+') as outputfile:
+    skipped = 0
     for user in userlist:
+        # Some personas (e.g. contacts without a routable address) may lack
+        # an EmailAddresses field entirely — skip them gracefully
+        if not user.get('EmailAddresses'):
+            skipped += 1
+            continue
         email = user['EmailAddresses'][0]['EmailAddress']
         outputfile.write(email+"\n")
         print(email)
 
-print("\nFetched %s emails" % str(len(userlist)))
+print("\nFetched %s emails" % str(len(userlist) - skipped))
+print("Skipped %s entries with no email address" % skipped)
 print("Emails written to", OUTPUT)
